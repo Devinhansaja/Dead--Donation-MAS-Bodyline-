@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dead Donation Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body>
+
+    <div id="login-section" class="screen-centered">
+        <div class="card login-card fade-in">
+            <div class="logo-circle">DDT</div>
+            <h2>Dead Donation Tracker</h2>
+            <p>System Login Area</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="login-email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" required placeholder="Enter your password">
+                </div>
+                <button type="submit" class="btn btn-primary">Secure Login</button>
+            </form>
+            <div id="login-error" class="alert error hidden"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-section" class="dashboard-layout hidden fade-in">
+        <aside class="sidebar">
+            <div class="brand-container">
+                <h3 class="brand">DDT System</h3>
+                <p class="user-role" id="user-role-display">Role</p>
+            </div>
+            <nav id="nav-menu"></nav>
+            <button id="logout-btn" class="btn btn-danger mt-auto">Logout</button>
+        </aside>
+
+        <main class="main-content">
+            <section id="hr-upload-view" class="view hidden">
+                <h2>Upload Document</h2>
+                <div class="card">
+                    <form id="upload-form">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>System ID (Auto Generated)</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="sys-id" disabled>
+                                    <button type="button" id="btn-reset-id" class="btn btn-danger" style="width: auto; padding: 0.5rem 1rem; font-size: 0.8rem;">Reset to 01</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Employee ID *</label>
+                                <input type="text" id="emp-id" required>
+                            </div>
+                            <div class="form-group">
+                                <label>EPF Number *</label>
+                                <input type="text" id="epf-num" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Employee Name *</label>
+                                <input type="text" id="emp-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Contact Number *</label>
+                                <input type="text" id="contact-num" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Department *</label>
+                                <input type="text" id="department" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Relationship *</label>
+                                <select id="relationship" required>
+                                    <option value="">Select...</option>
+                                    <option value="Mother">Mother</option>
+                                    <option value="Father">Father</option>
+                                    <option value="Child">Child</option>
+                                    <option value="Spouse">Spouse</option>
+                                    <option value="Mother In Law">Mother In Law</option>
+                                    <option value="Father In Law">Father In Law</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Relationship Name *</label>
+                                <input type="text" id="rel-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>BP Name *</label>
+                                <select id="bp-name" required>
+                                    <option value="">Select...</option>
+                                    <option value="Nilmini">Nilmini</option>
+                                    <option value="Peshalika">Peshalika</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Submit Document</button>
+                        <div id="upload-msg" class="alert hidden mt-2"></div>
+                    </form>
+                </div>
+            </section>
+
+            <section id="hr-verify-view" class="view hidden">
+                <h2>Document Verification</h2>
+                
+                <div class="card mb-2">
+                    <div class="search-bar">
+                        <input type="text" id="search-verify-epf" placeholder="Search by EPF Number...">
+                        <button id="btn-search-verify" class="btn btn-primary">Search</button>
+                    </div>
+                </div>
+
+                <div id="verify-table-container" class="card mb-2 slide-up">
+                    <h3>Pending Verifications</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>EPF</th>
+                                    <th>Employee Name</th>
+                                    <th>BP Name</th>
+                                    <th>Submission Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verify-pending-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="verify-details" class="card hidden slide-up">
+                    <h3>Employee Details</h3>
+                    <div id="verify-data-container" class="data-grid"></div>
+                    <div class="action-buttons mt-2">
+                        <button id="btn-andon" class="btn btn-danger">Raise ANDON</button>
+                        <button id="btn-insurance" class="btn btn-success">Settle / Send To Insurance</button>
+                    </div>
+                    <button id="btn-cancel-verify" class="btn btn-secondary mt-2" style="width: 100%;">Cancel / Back to List</button>
+                </div>
+            </section>
+
+            <section id="hr-track-view" class="view hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin-bottom: 0;">Track Document Status</h2>
+                    <button id="btn-download-andon" class="btn btn-success" style="width: auto;">📥 Download ANDON History (CSV)</button>
+                </div>
+                <div class="card">
+                    <div class="search-bar mb-2">
+                        <input type="text" id="search-track-epf" placeholder="Enter EPF Number...">
+                        <button id="btn-track-epf" class="btn btn-primary">Check Status</button>
+                    </div>
+                    <div id="track-result" class="alert hidden mt-2"></div>
+                </div>
+            </section>
+
+            <section id="hr-settle-view" class="view hidden">
+                <h2>Settled Documents</h2>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>EPF</th>
+                                    <th>Employee Name</th>
+                                    <th>BP Name</th>
+                                    <th>Relationship</th>
+                                    <th>Status</th>
+                                    <th>Settled Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="settle-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="bp-pending-view" class="view hidden">
+                <h2>Pending Review Documents</h2>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>EPF</th>
+                                    <th>Employee Name</th>
+                                    <th>Submission Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bp-pending-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="bp-andon-view" class="view hidden">
+                <h2>ANDON Documents (Needs Correction)</h2>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>EPF</th>
+                                    <th>Employee Name</th>
+                                    <th>Submission Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bp-andon-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="bp-approved-view" class="view hidden">
+                <h2>Approved Documents (Sent to HR)</h2>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>EPF</th>
+                                    <th>Employee Name</th>
+                                    <th>Status</th>
+                                    <th>Submission Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bp-approved-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="bp-action-modal" class="modal hidden">
+        <div class="modal-content card">
+            <h3>Submit Document Review</h3>
+            <div id="bp-action-data" class="data-grid mb-2"></div>
+            <form id="bp-action-form">
+                <div class="form-group">
+                    <label>Relationship Type *</label>
+                    <select id="bp-rel-type" required>
+                        <option value="">Select...</option>
+                        <option value="Close Relationship">Close Relationship</option>
+                        <option value="Relationship On Law">Relationship On Law</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Additional Details (Optional)</label>
+                    <textarea id="bp-details-text" rows="4"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="close-bp-modal" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit to HR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="andon-modal" class="modal hidden">
+        <div class="modal-content card">
+            <h3>Raise ANDON Alert</h3>
+            <form id="andon-form">
+                <div class="form-group">
+                    <label>EPF Number</label>
+                    <input type="text" id="andon-epf" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Employee Name</label>
+                    <input type="text" id="andon-name" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Message to BP *</label>
+                    <textarea id="andon-msg" rows="5" required placeholder="State why documents do not match..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="close-modal" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Send ANDON Email</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
